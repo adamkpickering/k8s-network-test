@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rd-test
+  namespace: default
+data:
+  index.html: "hello world"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rd-test
+  namespace: default
+  labels:
+    app: rd-test
+spec:
+  restartPolicy: Always
+  containers:
+    - name: server
+      image: python:3.10-alpine3.14
+      command: ["python", "-m", "http.server"]
+      args: ["--directory", "/srv", "80"]
+      ports:
+        - name: http
+          protocol: TCP
+          containerPort: 80
+      volumeMounts:
+        - name: myvolume
+          mountPath: /srv
+          readOnly: true
+  volumes:
+    - name: myvolume
+      configMap:
+        name: rd-test
+        items:
+          - key: index.html
+            path: index.html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rd-test
+  namespace: default
+spec:
+  selector:
+    app: rd-test
+  ports:
+    - protocol: TCP
+      targetPort: 80
+      port: 8000
+  type: ClusterIP
